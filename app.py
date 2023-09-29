@@ -47,18 +47,16 @@ def main():
     command = ""
     while True:
         if command == "":
-            command = input("What would you like to do? You can 'add task', 'show scores', or 'exit'. ")
+            command = input("What would you like to do? You can 'add task' or 'show scores'. ")
         elif command.lower() == "add task":
             command = addTask()
         elif command.lower() == "show scores":
-            for instance in ListItem.instances:
+            for instance in sorted(ListItem.instances, key=lambda instance: instance.score, reverse=True):
                 print(instance.task)
                 print(instance.effort)
                 print(instance.importance)
                 print(instance.score)
             command = ""
-        elif command.lower == "exit":
-            exit()
         else:
             command = ""
 	
