@@ -1,0 +1,13 @@
+{% load static %}
+
+<link rel="stylesheet" href="{% static 'todoapp/style.css' %}">"
+
+{% if latest_list %}
+    <ul>
+    {% for list in latest_list %}
+        <li><a href="{% url 'todoapp:detail' list.id %}">{{ list.list_name }}</a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No lists are available.</p>
+{% endif %}
