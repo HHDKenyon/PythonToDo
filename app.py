@@ -1,3 +1,20 @@
+import sqlite3
+
+# Create or connect to sqlite3 database, then create cursor
+dbconnection = sqlite3.connect('todo_database.db')
+dbcursor = dbconnection.cursor()
+
+# Create tables in db
+dbcursor.execute(
+    '''CREATE TABLE IF NOT EXISTS todo_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task TEXT,
+        effort INTEGER,
+        importance INTEGER,
+        score REAL AS ( CAST(importance AS REAL) / effort ) STORED
+    )
+''')
+
 class ListItem:
     instances = []
 
@@ -17,7 +34,8 @@ class ListItem:
          effort = int(input("Effort: "))
          importance = int(input("Importance: "))
          score = importance / effort
-         return cls(task, effort, importance, score)
+         dbcursor.execute('''INSERT INTO todo_items (task, effort, importance) VALUES (?, ?, ?)''', (task, effort, importance))
+         dbconnection.commit()
     
     @property
     def task(self):
@@ -51,11 +69,15 @@ def main():
         elif command.lower() == "add task":
             command = addTask()
         elif command.lower() == "show scores":
-            for instance in sorted(ListItem.instances, key=lambda instance: instance.score, reverse=True):
-                print(instance.task)
-                print(instance.effort)
-                print(instance.importance)
-                print(instance.score)
+            dbcursor.execute('''SELECT * FROM todo_items''')
+            items = dbcursor.fetchall()
+            for item in items:
+                print(item)
+            #for instance in sorted(ListItem.instances, key=lambda instance: instance.score, reverse=True):
+            #    print(instance.task)
+            #    print(instance.effort)
+            #    print(instance.importance)
+            #    print(instance.score)
             command = ""
         else:
             command = ""
