@@ -4,26 +4,36 @@ import sqlite3
 dbconnection = sqlite3.connect("todo_database.db")
 dbcursor = dbconnection.cursor()
 
-# Create table in db
+# Create table if it doesn't exist
 dbcursor.execute(
-    """CREATE TABLE IF NOT EXISTS todo_items (
+    """
+    CREATE TABLE IF NOT EXISTS todo_items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         task TEXT,
         effort INTEGER,
         importance INTEGER,
+        earliestStart DATE,
+        deadline DATE,
         score REAL AS ( CAST(importance AS REAL) / effort ) STORED
-    )
-"""
+    );
+    """
 )
+
+dbconnection.commit()
+
+
+# Need some step in here to handle the case where the table exists but needs to be modified - add or remove columns without losing data
 
 
 class ListItem:
     instances = []
 
-    def __init__(self, task, effort, importance, score):
+    def __init__(self, task, effort, importance, earliestStart=None, deadline=None, score=None):
         self.task = task
         self.effort = effort
         self.importance = importance
+        self.earliestStart = earliestStart
+        self.deadline = deadline
         self.score = score
         ListItem.instances.append(self)
 
@@ -35,9 +45,11 @@ class ListItem:
         task = input("Task: ")
         effort = int(input("Effort: "))
         importance = int(input("Importance: "))
+        earliestStart = input("Earliest Start (optional): ")
+        deadline = input("Deadline (optional): ")
         dbcursor.execute(
-            """INSERT INTO todo_items (task, effort, importance) VALUES (?, ?, ?)""",
-            (task, effort, importance),
+            """INSERT INTO todo_items (task, effort, importance, earliestStart, deadline) VALUES (?, ?, ?, ?, ?)""",
+            (task, effort, importance, earliestStart, deadline),
         )
         dbconnection.commit()
 
@@ -62,6 +74,8 @@ class ListItem:
         task = input("Task: ") or None
         effort = input("Effort: ") or None
         importance = input("Importance: ") or None
+        earliestStart = input("Earliest Start (optional): ") or None
+        deadline = input("Deadline (optional): ") or None
 
         # Parts of the SQL statement
         updates = []
@@ -77,6 +91,12 @@ class ListItem:
         if importance is not None:
             updates.append("importance = ?")
             parameters.append(importance)
+        if earliestStart is not None:
+            updates.append("earliestStart = ?")
+            parameters.append(earliestStart)
+        if deadline is not None:
+            updates.append("deadline = ?")
+            parameters.append(deadline)
 
         # Only proceed if there are fields to update
         if not updates:
@@ -89,6 +109,15 @@ class ListItem:
         # Execute the update
         dbcursor.execute(sql, parameters)
         dbconnection.commit()
+
+    @classmethod
+    def rank(cls):
+        dbcursor.execute("""SELECT * FROM todo_items ORDER BY score DESC LIMIT 1""")
+        item = dbcursor.fetchone()
+        if item:
+            print(f"The task with the highest score is: {item[1]}")
+        else:
+            print("No tasks found.")
 
     @classmethod
     def delete(cls):
@@ -134,7 +163,7 @@ def main():
     while True:
         if command == "":
             command = input(
-                "What would you like to do? You can 'add', 'list', 'edit', or 'delete' tasks. "
+                "What would you like to do? You can 'add', 'list', 'rank', 'edit', 'delete', or 'exit' to quit the app. "
             )
         elif command.lower() == "add":
             ListItem.add()
@@ -142,15 +171,19 @@ def main():
         elif command.lower() == "list":
             ListItem.list()
             command = ""
+        elif command.lower() == "rank":
+            ListItem.rank()
+            command = ""
         elif command.lower() == "edit":
             ListItem.edit()
             command = ""
         elif command.lower() == "delete":
             ListItem.delete()
             command = ""
+        elif command.lower() == "exit":
+            break
         else:
             command = ""
-
 
 if __name__ == "__main__":
     main()
